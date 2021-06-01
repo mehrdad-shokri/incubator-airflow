@@ -24,9 +24,7 @@ from airflow.utils.sqlalchemy import UtcDateTime
 
 
 class TaskReschedule(Base):
-    """
-    TaskReschedule tracks rescheduled task instances.
-    """
+    """TaskReschedule tracks rescheduled task instances."""
 
     __tablename__ = "task_reschedule"
 
@@ -41,17 +39,16 @@ class TaskReschedule(Base):
     reschedule_date = Column(UtcDateTime, nullable=False)
 
     __table_args__ = (
-        Index('idx_task_reschedule_dag_task_date', dag_id, task_id, execution_date,
-              unique=False),
-        ForeignKeyConstraint([task_id, dag_id, execution_date],
-                             ['task_instance.task_id', 'task_instance.dag_id',
-                              'task_instance.execution_date'],
-                             name='task_reschedule_dag_task_date_fkey',
-                             ondelete='CASCADE')
+        Index('idx_task_reschedule_dag_task_date', dag_id, task_id, execution_date, unique=False),
+        ForeignKeyConstraint(
+            [task_id, dag_id, execution_date],
+            ['task_instance.task_id', 'task_instance.dag_id', 'task_instance.execution_date'],
+            name='task_reschedule_dag_task_date_fkey',
+            ondelete='CASCADE',
+        ),
     )
 
-    def __init__(self, task, execution_date, try_number, start_date, end_date,
-                 reschedule_date):
+    def __init__(self, task, execution_date, try_number, start_date, end_date, reschedule_date):
         self.dag_id = task.dag_id
         self.task_id = task.task_id
         self.execution_date = execution_date
@@ -63,7 +60,7 @@ class TaskReschedule(Base):
 
     @staticmethod
     @provide_session
-    def query_for_task_instance(task_instance, descending=False, session=None):
+    def query_for_task_instance(task_instance, descending=False, session=None, try_number=None):
         """
         Returns query for task reschedules for a given the task instance.
 
@@ -73,15 +70,19 @@ class TaskReschedule(Base):
         :type task_instance: airflow.models.TaskInstance
         :param descending: If True then records are returned in descending order
         :type descending: bool
+        :param try_number: Look for TaskReschedule of the given try_number. Default is None which
+            looks for the same try_number of the given task_instance.
+        :type try_number: int
         """
+        if try_number is None:
+            try_number = task_instance.try_number
+
         TR = TaskReschedule
-        qry = (
-            session
-            .query(TR)
-            .filter(TR.dag_id == task_instance.dag_id,
-                    TR.task_id == task_instance.task_id,
-                    TR.execution_date == task_instance.execution_date,
-                    TR.try_number == task_instance.try_number)
+        qry = session.query(TR).filter(
+            TR.dag_id == task_instance.dag_id,
+            TR.task_id == task_instance.task_id,
+            TR.execution_date == task_instance.execution_date,
+            TR.try_number == try_number,
         )
         if descending:
             return qry.order_by(desc(TR.id))
@@ -90,7 +91,7 @@ class TaskReschedule(Base):
 
     @staticmethod
     @provide_session
-    def find_for_task_instance(task_instance, session=None):
+    def find_for_task_instance(task_instance, session=None, try_number=None):
         """
         Returns all task reschedules for the task instance and try number,
         in ascending order.
@@ -99,5 +100,10 @@ class TaskReschedule(Base):
         :type session: sqlalchemy.orm.session.Session
         :param task_instance: the task instance to find task reschedules for
         :type task_instance: airflow.models.TaskInstance
+        :param try_number: Look for TaskReschedule of the given try_number. Default is None which
+            looks for the same try_number of the given task_instance.
+        :type try_number: int
         """
-        return TaskReschedule.query_for_task_instance(task_instance, session=session).all()
+        return TaskReschedule.query_for_task_instance(
+            task_instance, session=session, try_number=try_number
+        ).all()

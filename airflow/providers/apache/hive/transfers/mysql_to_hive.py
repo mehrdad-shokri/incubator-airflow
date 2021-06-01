@@ -16,9 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""
-This module contains operator to move data from MySQL to Druid.
-"""
+"""This module contains operator to move data from MySQL to Druid."""
 
 from collections import OrderedDict
 from tempfile import NamedTemporaryFile
@@ -30,7 +28,6 @@ import unicodecsv as csv
 from airflow.models import BaseOperator
 from airflow.providers.apache.hive.hooks.hive import HiveCliHook
 from airflow.providers.mysql.hooks.mysql import MySqlHook
-from airflow.utils.decorators import apply_defaults
 
 
 class MySqlToHiveOperator(BaseOperator):
@@ -73,8 +70,9 @@ class MySqlToHiveOperator(BaseOperator):
     :type escapechar: str
     :param mysql_conn_id: source mysql connection
     :type mysql_conn_id: str
-    :param hive_conn_id: destination hive connection
-    :type hive_conn_id: str
+    :param hive_cli_conn_id: Reference to the
+        :ref:`Hive CLI connection id <howto/connection:hive_cli>`.
+    :type hive_cli_conn_id: str
     :param tblproperties: TBLPROPERTIES of the hive table being created
     :type tblproperties: dict
     """
@@ -83,23 +81,23 @@ class MySqlToHiveOperator(BaseOperator):
     template_ext = ('.sql',)
     ui_color = '#a0e08c'
 
-    @apply_defaults
     def __init__(  # pylint: disable=too-many-arguments
-            self,
-            *,
-            sql: str,
-            hive_table: str,
-            create: bool = True,
-            recreate: bool = False,
-            partition: Optional[Dict] = None,
-            delimiter: str = chr(1),
-            quoting: Optional[str] = None,
-            quotechar: str = '"',
-            escapechar: Optional[str] = None,
-            mysql_conn_id: str = 'mysql_default',
-            hive_cli_conn_id: str = 'hive_cli_default',
-            tblproperties: Optional[Dict] = None,
-            **kwargs) -> None:
+        self,
+        *,
+        sql: str,
+        hive_table: str,
+        create: bool = True,
+        recreate: bool = False,
+        partition: Optional[Dict] = None,
+        delimiter: str = chr(1),
+        quoting: Optional[str] = None,
+        quotechar: str = '"',
+        escapechar: Optional[str] = None,
+        mysql_conn_id: str = 'mysql_default',
+        hive_cli_conn_id: str = 'hive_cli_default',
+        tblproperties: Optional[Dict] = None,
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
         self.sql = sql
         self.hive_table = hive_table
@@ -117,9 +115,7 @@ class MySqlToHiveOperator(BaseOperator):
 
     @classmethod
     def type_map(cls, mysql_type: int) -> str:
-        """
-        Maps MySQL type to Hive type.
-        """
+        """Maps MySQL type to Hive type."""
         types = MySQLdb.constants.FIELD_TYPE
         type_map = {
             types.BIT: 'INT',
@@ -146,11 +142,14 @@ class MySqlToHiveOperator(BaseOperator):
         cursor = conn.cursor()
         cursor.execute(self.sql)
         with NamedTemporaryFile("wb") as f:
-            csv_writer = csv.writer(f, delimiter=self.delimiter,
-                                    quoting=self.quoting,
-                                    quotechar=self.quotechar,
-                                    escapechar=self.escapechar,
-                                    encoding="utf-8")
+            csv_writer = csv.writer(
+                f,
+                delimiter=self.delimiter,
+                quoting=self.quoting,
+                quotechar=self.quotechar,
+                escapechar=self.escapechar,
+                encoding="utf-8",
+            )
             field_dict = OrderedDict()
             for field in cursor.description:
                 field_dict[field[0]] = self.type_map(field[1])
@@ -167,4 +166,5 @@ class MySqlToHiveOperator(BaseOperator):
                 partition=self.partition,
                 delimiter=self.delimiter,
                 recreate=self.recreate,
-                tblproperties=self.tblproperties)
+                tblproperties=self.tblproperties,
+            )

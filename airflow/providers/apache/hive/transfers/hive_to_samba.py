@@ -16,16 +16,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""
-This module contains operator to move data from Hive to Samba.
-"""
+"""This module contains operator to move data from Hive to Samba."""
 
 from tempfile import NamedTemporaryFile
 
 from airflow.models import BaseOperator
 from airflow.providers.apache.hive.hooks.hive import HiveServer2Hook
 from airflow.providers.samba.hooks.samba import SambaHook
-from airflow.utils.decorators import apply_defaults
 from airflow.utils.operator_helpers import context_to_airflow_vars
 
 
@@ -40,20 +37,26 @@ class HiveToSambaOperator(BaseOperator):
     :type destination_filepath: str
     :param samba_conn_id: reference to the samba destination
     :type samba_conn_id: str
-    :param hiveserver2_conn_id: reference to the hiveserver2 service
+    :param hiveserver2_conn_id: Reference to the
+        :ref: `Hive Server2 thrift service connection id <howto/connection:hiveserver2>`.
     :type hiveserver2_conn_id: str
     """
 
     template_fields = ('hql', 'destination_filepath')
-    template_ext = ('.hql', '.sql',)
+    template_ext = (
+        '.hql',
+        '.sql',
+    )
 
-    @apply_defaults
-    def __init__(self, *,
-                 hql: str,
-                 destination_filepath: str,
-                 samba_conn_id: str = 'samba_default',
-                 hiveserver2_conn_id: str = 'hiveserver2_default',
-                 **kwargs) -> None:
+    def __init__(
+        self,
+        *,
+        hql: str,
+        destination_filepath: str,
+        samba_conn_id: str = 'samba_default',
+        hiveserver2_conn_id: str = 'hiveserver2_default',
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
         self.hiveserver2_conn_id = hiveserver2_conn_id
         self.samba_conn_id = samba_conn_id

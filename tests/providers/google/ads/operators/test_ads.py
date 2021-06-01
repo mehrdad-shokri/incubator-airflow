@@ -33,9 +33,11 @@ QUERY = """
     """
 
 FIELDS_TO_EXTRACT = ["segments.date.value", "customer.id.value"]
+IMPERSONATION_CHAIN = ["ACCOUNT_1", "ACCOUNT_2", "ACCOUNT_3"]
 
 gcp_conn_id = "gcp_conn_id"
 google_ads_conn_id = "google_ads_conn_id"
+api_version = "v5"
 
 
 class TestGoogleAdsListAccountsOperator:
@@ -56,13 +58,20 @@ class TestGoogleAdsListAccountsOperator:
             object_name=GCS_OBJ_PATH,
             bucket=BUCKET,
             task_id="run_operator",
+            impersonation_chain=IMPERSONATION_CHAIN,
+            api_version=api_version,
         )
         op.execute({})
 
         mock_ads_hook.assert_called_once_with(
-            gcp_conn_id=gcp_conn_id, google_ads_conn_id=google_ads_conn_id
+            gcp_conn_id=gcp_conn_id,
+            google_ads_conn_id=google_ads_conn_id,
+            api_version=api_version,
         )
-        mock_gcs_hook.assert_called_once_with(gcp_conn_id=gcp_conn_id)
+        mock_gcs_hook.assert_called_once_with(
+            gcp_conn_id=gcp_conn_id,
+            impersonation_chain=IMPERSONATION_CHAIN,
+        )
 
         mock_ads_hook.return_value.list_accessible_customers.assert_called_once_with()
         mocks_csv_writer.assert_called_once_with(file_object)

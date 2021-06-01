@@ -21,7 +21,6 @@ from typing import Optional
 
 from airflow.models import BaseOperator
 from airflow.providers.amazon.aws.hooks.ec2 import EC2Hook
-from airflow.utils.decorators import apply_defaults
 
 
 class EC2StopInstanceOperator(BaseOperator):
@@ -43,13 +42,15 @@ class EC2StopInstanceOperator(BaseOperator):
     ui_color = "#eeaa11"
     ui_fgcolor = "#ffffff"
 
-    @apply_defaults
-    def __init__(self, *,
-                 instance_id: str,
-                 aws_conn_id: str = "aws_default",
-                 region_name: Optional[str] = None,
-                 check_interval: float = 15,
-                 **kwargs):
+    def __init__(
+        self,
+        *,
+        instance_id: str,
+        aws_conn_id: str = "aws_default",
+        region_name: Optional[str] = None,
+        check_interval: float = 15,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.instance_id = instance_id
         self.aws_conn_id = aws_conn_id
@@ -57,10 +58,7 @@ class EC2StopInstanceOperator(BaseOperator):
         self.check_interval = check_interval
 
     def execute(self, context):
-        ec2_hook = EC2Hook(
-            aws_conn_id=self.aws_conn_id,
-            region_name=self.region_name
-        )
+        ec2_hook = EC2Hook(aws_conn_id=self.aws_conn_id, region_name=self.region_name)
         self.log.info("Stopping EC2 instance %s", self.instance_id)
         instance = ec2_hook.get_instance(instance_id=self.instance_id)
         instance.stop()

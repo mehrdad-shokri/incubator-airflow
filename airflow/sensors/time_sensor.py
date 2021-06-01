@@ -16,9 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from airflow.sensors.base_sensor_operator import BaseSensorOperator
+from airflow.sensors.base import BaseSensorOperator
 from airflow.utils import timezone
-from airflow.utils.decorators import apply_defaults
 
 
 class TimeSensor(BaseSensorOperator):
@@ -29,7 +28,6 @@ class TimeSensor(BaseSensorOperator):
     :type target_time: datetime.time
     """
 
-    @apply_defaults
     def __init__(self, *, target_time, **kwargs):
         super().__init__(**kwargs)
         self.target_time = target_time

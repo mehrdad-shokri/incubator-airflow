@@ -16,15 +16,14 @@
 # under the License.
 """Basic authentication backend"""
 from functools import wraps
-from typing import Callable, Optional, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Optional, Tuple, TypeVar, Union, cast
 
 from flask import Response, current_app, request
 from flask_appbuilder.const import AUTH_LDAP
 from flask_appbuilder.security.sqla.models import User
 from flask_login import login_user
-from requests.auth import AuthBase
 
-CLIENT_AUTH: Optional[Union[Tuple[str, str], AuthBase]] = None
+CLIENT_AUTH: Optional[Union[Tuple[str, str], Any]] = None
 
 
 def init_app(_):
@@ -53,13 +52,12 @@ def auth_current_user() -> Optional[User]:
 
 def requires_authentication(function: T):
     """Decorator for functions that require authentication"""
+
     @wraps(function)
     def decorated(*args, **kwargs):
         if auth_current_user() is not None:
             return function(*args, **kwargs)
         else:
-            return Response(
-                "Unauthorized", 401, {"WWW-Authenticate": "Basic"}
-            )
+            return Response("Unauthorized", 401, {"WWW-Authenticate": "Basic"})
 
     return cast(T, decorated)

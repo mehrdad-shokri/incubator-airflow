@@ -18,7 +18,10 @@
 import os
 from typing import Collection, Optional
 
-from cached_property import cached_property
+try:
+    from functools import cached_property
+except ImportError:
+    from cached_property import cached_property
 from google.api_core.client_info import ClientInfo
 from google.cloud import storage
 
@@ -27,9 +30,11 @@ from airflow.providers.google.cloud.utils.credentials_provider import get_creden
 from airflow.utils.log.file_task_handler import FileTaskHandler
 from airflow.utils.log.logging_mixin import LoggingMixin
 
-_DEFAULT_SCOPESS = frozenset([
-    "https://www.googleapis.com/auth/devstorage.read_write",
-])
+_DEFAULT_SCOPESS = frozenset(
+    [
+        "https://www.googleapis.com/auth/devstorage.read_write",
+    ]
+)
 
 
 class GCSTaskHandler(FileTaskHandler, LoggingMixin):
@@ -46,19 +51,21 @@ class GCSTaskHandler(FileTaskHandler, LoggingMixin):
     :type gcs_log_folder: str
     :param filename_template: template filename string
     :type filename_template: str
-    :param gcp_key_path: Path to GCP Credential JSON file. Mutually exclusive with gcp_keyfile_dict.
+    :param gcp_key_path: Path to Google Cloud Service Account file (JSON). Mutually exclusive with
+        gcp_keyfile_dict.
         If omitted, authorization based on `the Application Default Credentials
         <https://cloud.google.com/docs/authentication/production#finding_credentials_automatically>`__ will
         be used.
     :type gcp_key_path: str
     :param gcp_keyfile_dict: Dictionary of keyfile parameters. Mutually exclusive with gcp_key_path.
     :type gcp_keyfile_dict: dict
-    :param gcp_scopes: Comma-separated string containing GCP scopes
+    :param gcp_scopes: Comma-separated string containing OAuth2 scopes
     :type gcp_scopes: str
     :param project_id: Project ID to read the secrets from. If not passed, the project ID from credentials
         will be used.
     :type project_id: str
     """
+
     def __init__(
         self,
         *,
@@ -89,12 +96,12 @@ class GCSTaskHandler(FileTaskHandler, LoggingMixin):
             key_path=self.gcp_key_path,
             keyfile_dict=self.gcp_keyfile_dict,
             scopes=self.scopes,
-            disable_logging=True
+            disable_logging=True,
         )
         return storage.Client(
             credentials=credentials,
             client_info=ClientInfo(client_library_version='airflow_v' + version.version),
-            project=self.project_id if self.project_id else project_id
+            project=self.project_id if self.project_id else project_id,
         )
 
     def set_context(self, ti):
@@ -106,9 +113,7 @@ class GCSTaskHandler(FileTaskHandler, LoggingMixin):
         self.upload_on_close = not ti.raw
 
     def close(self):
-        """
-        Close and upload local log file to remote storage GCS.
-        """
+        """Close and upload local log file to remote storage GCS."""
         # When application exit, system shuts down all handlers by
         # calling close method. Here we check if logger is already
         # closed to prevent uploading the log to remote storage multiple
@@ -125,7 +130,7 @@ class GCSTaskHandler(FileTaskHandler, LoggingMixin):
         remote_loc = os.path.join(self.remote_base, self.log_relative_path)
         if os.path.exists(local_loc):
             # read log and remove old logs to get just the latest additions
-            with open(local_loc, 'r') as logfile:
+            with open(local_loc) as logfile:
                 log = logfile.read()
             self.gcs_write(log, remote_loc)
 
@@ -150,13 +155,11 @@ class GCSTaskHandler(FileTaskHandler, LoggingMixin):
 
         try:
             blob = storage.Blob.from_string(remote_loc, self.client)
-            remote_log = blob.download_as_string()
-            log = '*** Reading remote log from {}.\n{}\n'.format(
-                remote_loc, remote_log)
+            remote_log = blob.download_as_bytes().decode()
+            log = f'*** Reading remote log from {remote_loc}.\n{remote_log}\n'
             return log, {'end_of_log': True}
         except Exception as e:  # pylint: disable=broad-except
-            log = '*** Unable to read remote log from {}\n*** {}\n\n'.format(
-                remote_loc, str(e))
+            log = f'*** Unable to read remote log from {remote_loc}\n*** {str(e)}\n\n'
             self.log.error(log)
             local_log, metadata = super()._read(ti, try_number)
             log += local_log
@@ -174,11 +177,11 @@ class GCSTaskHandler(FileTaskHandler, LoggingMixin):
         """
         try:
             blob = storage.Blob.from_string(remote_log_location, self.client)
-            old_log = blob.download_as_string()
+            old_log = blob.download_as_bytes().decode()
             log = '\n'.join([old_log, log]) if old_log else log
         except Exception as e:  # pylint: disable=broad-except
             if not hasattr(e, 'resp') or e.resp.get('status') != '404':  # pylint: disable=no-member
-                log = '*** Previous log discarded: {}\n\n'.format(str(e)) + log
+                log = f'*** Previous log discarded: {str(e)}\n\n' + log
                 self.log.info("Previous log discarded: %s", e)
 
         try:

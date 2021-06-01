@@ -15,10 +15,10 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+from typing import Optional
 
 from airflow.models import BaseOperator
 from airflow.providers.oracle.hooks.oracle import OracleHook
-from airflow.utils.decorators import apply_defaults
 
 
 class OracleToOracleOperator(BaseOperator):
@@ -30,7 +30,7 @@ class OracleToOracleOperator(BaseOperator):
     :type oracle_destination_conn_id: str
     :param destination_table: destination table to insert rows.
     :type destination_table: str
-    :param oracle_source_conn_id: source Oracle connection.
+    :param oracle_source_conn_id: :ref:`Source Oracle connection <howto/connection:oracle>`.
     :type oracle_source_conn_id: str
     :param source_sql: SQL query to execute against the source Oracle
         database. (templated)
@@ -42,18 +42,20 @@ class OracleToOracleOperator(BaseOperator):
     """
 
     template_fields = ('source_sql', 'source_sql_params')
+    template_fields_renderers = {"source_sql": "sql", "source_sql_params": "py"}
     ui_color = '#e08c8c'
 
-    @apply_defaults
     def __init__(
-            self, *,
-            oracle_destination_conn_id,
-            destination_table,
-            oracle_source_conn_id,
-            source_sql,
-            source_sql_params=None,
-            rows_chunk=5000,
-            **kwargs):
+        self,
+        *,
+        oracle_destination_conn_id: str,
+        destination_table: str,
+        oracle_source_conn_id: str,
+        source_sql: str,
+        source_sql_params: Optional[dict] = None,
+        rows_chunk: int = 5000,
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
         if source_sql_params is None:
             source_sql_params = {}
@@ -65,7 +67,7 @@ class OracleToOracleOperator(BaseOperator):
         self.rows_chunk = rows_chunk
 
     # pylint: disable=unused-argument
-    def _execute(self, src_hook, dest_hook, context):
+    def _execute(self, src_hook, dest_hook, context) -> None:
         with src_hook.get_conn() as src_conn:
             cursor = src_conn.cursor()
             self.log.info("Querying data from source: %s", self.oracle_source_conn_id)
@@ -75,17 +77,17 @@ class OracleToOracleOperator(BaseOperator):
             rows_total = 0
             rows = cursor.fetchmany(self.rows_chunk)
             while len(rows) > 0:
-                rows_total = rows_total + len(rows)
-                dest_hook.bulk_insert_rows(self.destination_table, rows,
-                                           target_fields=target_fields,
-                                           commit_every=self.rows_chunk)
+                rows_total += len(rows)
+                dest_hook.bulk_insert_rows(
+                    self.destination_table, rows, target_fields=target_fields, commit_every=self.rows_chunk
+                )
                 rows = cursor.fetchmany(self.rows_chunk)
                 self.log.info("Total inserted: %s rows", rows_total)
 
             self.log.info("Finished data transfer.")
             cursor.close()
 
-    def execute(self, context):
+    def execute(self, context) -> None:
         src_hook = OracleHook(oracle_conn_id=self.oracle_source_conn_id)
         dest_hook = OracleHook(oracle_conn_id=self.oracle_destination_conn_id)
         self._execute(src_hook, dest_hook, context)

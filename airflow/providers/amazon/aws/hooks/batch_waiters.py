@@ -42,8 +42,7 @@ from airflow.providers.amazon.aws.hooks.batch_client import AwsBatchClientHook
 
 class AwsBatchWaitersHook(AwsBatchClientHook):
     """
-    A utility to manage waiters for AWS batch services
-    Examples:
+    A utility to manage waiters for AWS batch services.
 
     .. code-block:: python
 
@@ -60,7 +59,7 @@ class AwsBatchWaitersHook(AwsBatchClientHook):
         # modify custom_config['waiters'] as necessary and get a new instance:
         waiters = AwsBatchWaiters(waiter_config=custom_config)
         waiters.waiter_config  # check the custom configuration (this is a deepcopy)
-        waiters.list_waiters() # names of custom waiters
+        waiters.list_waiters()  # names of custom waiters
 
         # During the init for AwsBatchWaiters, the waiter_config is used to build a waiter_model;
         # and note that this only occurs during the class init, to avoid any accidental mutations
@@ -71,12 +70,16 @@ class AwsBatchWaitersHook(AwsBatchClientHook):
         # and the details of the config on that waiter can be further modified without any
         # accidental impact on the generation of new waiters from the defined waiter_model, e.g.
         waiters.get_waiter("JobExists").config.delay  # -> 5
-        waiter = waiters.get_waiter("JobExists")  # -> botocore.waiter.Batch.Waiter.JobExists object
+        waiter = waiters.get_waiter(
+            "JobExists"
+        )  # -> botocore.waiter.Batch.Waiter.JobExists object
         waiter.config.delay = 10
         waiters.get_waiter("JobExists").config.delay  # -> 5 as defined by waiter_model
 
         # To use a specific waiter, update the config and call the `wait()` method for jobId, e.g.
-        waiter = waiters.get_waiter("JobExists")  # -> botocore.waiter.Batch.Waiter.JobExists object
+        waiter = waiters.get_waiter(
+            "JobExists"
+        )  # -> botocore.waiter.Batch.Waiter.JobExists object
         waiter.config.delay = random.uniform(1, 10)  # seconds
         waiter.config.max_attempts = 10
         waiter.wait(jobs=[jobId])
@@ -102,12 +105,7 @@ class AwsBatchWaitersHook(AwsBatchClientHook):
     :type region_name: Optional[str]
     """
 
-    def __init__(
-        self,
-        *args,
-        waiter_config: Optional[Dict] = None,
-        **kwargs
-    ):
+    def __init__(self, *args, waiter_config: Optional[Dict] = None, **kwargs) -> None:
 
         super().__init__(*args, **kwargs)
 
@@ -159,7 +157,8 @@ class AwsBatchWaitersHook(AwsBatchClientHook):
         The ``.waiter_model`` is combined with the ``.client`` to get a specific waiter and
         the properties of that waiter can be modified without any accidental impact on the
         generation of new waiters from the ``.waiter_model``, e.g.
-        .. code-block::
+
+        .. code-block:: python
 
             waiters.get_waiter("JobExists").config.delay  # -> 5
             waiter = waiters.get_waiter("JobExists")  # a new waiter object
@@ -167,9 +166,11 @@ class AwsBatchWaitersHook(AwsBatchClientHook):
             waiters.get_waiter("JobExists").config.delay  # -> 5 as defined by waiter_model
 
         To use a specific waiter, update the config and call the `wait()` method for jobId, e.g.
-        .. code-block::
+
+        .. code-block:: python
 
             import random
+
             waiter = waiters.get_waiter("JobExists")  # a new waiter object
             waiter.config.delay = random.uniform(1, 10)  # seconds
             waiter.config.max_attempts = 10
@@ -183,9 +184,7 @@ class AwsBatchWaitersHook(AwsBatchClientHook):
         :return: a waiter object for the named AWS batch service
         :rtype: botocore.waiter.Waiter
         """
-        return botocore.waiter.create_waiter_with_client(
-            waiter_name, self.waiter_model, self.client
-        )
+        return botocore.waiter.create_waiter_with_client(waiter_name, self.waiter_model, self.client)
 
     def list_waiters(self) -> List[str]:
         """
@@ -196,7 +195,7 @@ class AwsBatchWaitersHook(AwsBatchClientHook):
         """
         return self.waiter_model.waiter_names
 
-    def wait_for_job(self, job_id: str, delay: Union[int, float, None] = None):
+    def wait_for_job(self, job_id: str, delay: Union[int, float, None] = None) -> None:
         """
         Wait for batch job to complete.  This assumes that the ``.waiter_model`` is configured
         using some variation of the ``.default_config`` so that it can generate waiters with the

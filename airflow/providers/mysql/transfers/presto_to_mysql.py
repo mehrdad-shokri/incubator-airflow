@@ -20,7 +20,6 @@ from typing import Dict, Optional
 from airflow.models import BaseOperator
 from airflow.providers.mysql.hooks.mysql import MySqlHook
 from airflow.providers.presto.hooks.presto import PrestoHook
-from airflow.utils.decorators import apply_defaults
 
 
 class PrestoToMySqlOperator(BaseOperator):
@@ -34,7 +33,7 @@ class PrestoToMySqlOperator(BaseOperator):
     :param mysql_table: target MySQL table, use dot notation to target a
         specific database. (templated)
     :type mysql_table: str
-    :param mysql_conn_id: source mysql connection
+    :param mysql_conn_id: Reference to :ref:`mysql connection id <howto/connection:mysql>`.
     :type mysql_conn_id: str
     :param presto_conn_id: source presto connection
     :type presto_conn_id: str
@@ -47,16 +46,19 @@ class PrestoToMySqlOperator(BaseOperator):
 
     template_fields = ('sql', 'mysql_table', 'mysql_preoperator')
     template_ext = ('.sql',)
+    template_fields_renderers = {"mysql_preoperator": "sql"}
     ui_color = '#a0e08c'
 
-    @apply_defaults
-    def __init__(self, *,
-                 sql: str,
-                 mysql_table: str,
-                 presto_conn_id: str = 'presto_default',
-                 mysql_conn_id: str = 'mysql_default',
-                 mysql_preoperator: Optional[str] = None,
-                 **kwargs) -> None:
+    def __init__(
+        self,
+        *,
+        sql: str,
+        mysql_table: str,
+        presto_conn_id: str = 'presto_default',
+        mysql_conn_id: str = 'mysql_default',
+        mysql_preoperator: Optional[str] = None,
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
         self.sql = sql
         self.mysql_table = mysql_table

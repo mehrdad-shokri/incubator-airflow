@@ -20,7 +20,6 @@ from typing import Optional, Union
 from airflow.exceptions import AirflowException
 from airflow.models import BaseOperator
 from airflow.providers.amazon.aws.hooks.step_function import StepFunctionHook
-from airflow.utils.decorators import apply_defaults
 
 
 class StepFunctionStartExecutionOperator(BaseOperator):
@@ -43,15 +42,21 @@ class StepFunctionStartExecutionOperator(BaseOperator):
     :param do_xcom_push: if True, execution_arn is pushed to XCom with key execution_arn.
     :type do_xcom_push: bool
     """
+
     template_fields = ['state_machine_arn', 'name', 'input']
     template_ext = ()
     ui_color = '#f9c915'
 
-    @apply_defaults
-    def __init__(self, *, state_machine_arn: str, name: Optional[str] = None,
-                 state_machine_input: Union[dict, str, None] = None,
-                 aws_conn_id='aws_default', region_name=None,
-                 **kwargs):
+    def __init__(
+        self,
+        *,
+        state_machine_arn: str,
+        name: Optional[str] = None,
+        state_machine_input: Union[dict, str, None] = None,
+        aws_conn_id: str = 'aws_default',
+        region_name: Optional[str] = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.state_machine_arn = state_machine_arn
         self.name = name

@@ -52,6 +52,7 @@ class TestOdbcHook:
             'DATABASE=schema;'
             'UID=login;'
             'PWD=password;'
+            'PORT=1234;'
             'Fake_Param=Fake Param;'
         )
         assert hook.odbc_connection_string == expected
@@ -66,6 +67,7 @@ class TestOdbcHook:
             'DATABASE=schema;'
             'UID=login;'
             'PWD=password;'
+            'PORT=1234;'
             'Fake_Param=Fake Param;'
         )
         assert hook.odbc_connection_string == expected
@@ -74,7 +76,7 @@ class TestOdbcHook:
         conn_params = dict(extra=json.dumps(dict(DSN='MyDSN', Fake_Param='Fake Param')))
         hook = self.get_hook(conn_params=conn_params)
         expected = (
-            'DSN=MyDSN;SERVER=host;DATABASE=schema;UID=login;PWD=password;Fake_Param=Fake Param;'
+            'DSN=MyDSN;SERVER=host;DATABASE=schema;UID=login;PWD=password;PORT=1234;Fake_Param=Fake Param;'
         )
         assert hook.odbc_connection_string == expected
 
@@ -89,6 +91,7 @@ class TestOdbcHook:
             'DATABASE=schema;'
             'UID=login;'
             'PWD=password;'
+            'PORT=1234;'
             'Fake_Param=Fake Param;'
         )
         assert hook.odbc_connection_string == expected
@@ -98,7 +101,7 @@ class TestOdbcHook:
         hook_params = dict(dsn='ParamDSN')
         hook = self.get_hook(hook_params=hook_params, conn_params=conn_params)
         uri_param = quote_plus(
-            'DSN=ParamDSN;SERVER=host;DATABASE=schema;UID=login;PWD=password;Fake_Param=Fake Param;'
+            'DSN=ParamDSN;SERVER=host;DATABASE=schema;UID=login;PWD=password;PORT=1234;Fake_Param=Fake Param;'
         )
         expected = 'mssql+pyodbc:///?odbc_connect=' + uri_param
         assert hook.get_uri() == expected
@@ -148,9 +151,7 @@ class TestOdbcHook:
         When connect_kwargs in both hook and conn, should be merged properly.
         Hook beats conn.
         """
-        conn_extra = json.dumps(
-            dict(connect_kwargs={'attrs_before': {1: 2, 3: 4}, 'readonly': False})
-        )
+        conn_extra = json.dumps(dict(connect_kwargs={'attrs_before': {1: 2, 3: 4}, 'readonly': False}))
         hook_params = dict(
             connect_kwargs={'attrs_before': {3: 5, pyodbc.SQL_TXN_ISOLATION: 0}, 'readonly': True}
         )

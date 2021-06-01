@@ -17,21 +17,21 @@
 # under the License.
 
 import json
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from airflow.models import BaseOperator
 from airflow.providers.slack.hooks.slack import SlackHook
-from airflow.utils.decorators import apply_defaults
 
 
 class SlackAPIOperator(BaseOperator):
     """
     Base Slack Operator
     The SlackAPIPostOperator is derived from this operator.
-    In the future additional Slack API Operators will be derived from this class as well
+    In the future additional Slack API Operators will be derived from this class as well.
     Only one of `slack_conn_id` and `token` is required.
 
-    :param slack_conn_id: Slack connection ID which its password is Slack API token. Optional
+    :param slack_conn_id: :ref:`Slack connection id <howto/connection:slack>`
+        which its password is Slack API token. Optional
     :type slack_conn_id: str
     :param token: Slack API token (https://api.slack.com/web). Optional
     :type token: str
@@ -40,16 +40,18 @@ class SlackAPIOperator(BaseOperator):
     :param api_params: API Method call parameters (https://api.slack.com/methods). Optional
     :type api_params: dict
     :param client_args: Slack Hook parameters. Optional. Check airflow.providers.slack.hooks.SlackHook
-    :type api_params: dict
+    :type client_args: dict
     """
 
-    @apply_defaults
-    def __init__(self, *,
-                 slack_conn_id: Optional[str] = None,
-                 token: Optional[str] = None,
-                 method: Optional[str] = None,
-                 api_params: Optional[Dict] = None,
-                 **kwargs) -> None:
+    def __init__(
+        self,
+        *,
+        slack_conn_id: Optional[str] = None,
+        token: Optional[str] = None,
+        method: Optional[str] = None,
+        api_params: Optional[Dict] = None,
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
 
         self.token = token  # type: Optional[str]
@@ -58,7 +60,7 @@ class SlackAPIOperator(BaseOperator):
         self.method = method
         self.api_params = api_params
 
-    def construct_api_call_params(self):
+    def construct_api_call_params(self) -> Any:
         """
         Used by the execute function. Allows templating on the source fields
         of the api_call_params dict before construction
@@ -73,7 +75,7 @@ class SlackAPIOperator(BaseOperator):
             "SlackAPIOperator should not be used directly. Chose one of the subclasses instead"
         )
 
-    def execute(self, **kwargs):
+    def execute(self, **kwargs):  # noqa: D403
         """
         SlackAPIOperator calls will not fail even if the call is not unsuccessful.
         It should not prevent a DAG from completing in success
@@ -119,18 +121,19 @@ class SlackAPIPostOperator(SlackAPIOperator):
     template_fields = ('username', 'text', 'attachments', 'blocks', 'channel')
     ui_color = '#FFBA40'
 
-    @apply_defaults
-    def __init__(self,
-                 channel: str = '#general',
-                 username: str = 'Airflow',
-                 text: str = 'No message has been set.\n'
-                             'Here is a cat video instead\n'
-                             'https://www.youtube.com/watch?v=J---aiyznGQ',
-                 icon_url: str = 'https://raw.githubusercontent.com/apache/'
-                                 'airflow/master/airflow/www/static/pin_100.png',
-                 attachments: Optional[List] = None,
-                 blocks: Optional[List] = None,
-                 **kwargs):
+    def __init__(
+        self,
+        channel: str = '#general',
+        username: str = 'Airflow',
+        text: str = 'No message has been set.\n'
+        'Here is a cat video instead\n'
+        'https://www.youtube.com/watch?v=J---aiyznGQ',
+        icon_url: str = 'https://raw.githubusercontent.com/apache/'
+        'airflow/master/airflow/www/static/pin_100.png',
+        attachments: Optional[List] = None,
+        blocks: Optional[List] = None,
+        **kwargs,
+    ) -> None:
         self.method = 'chat.postMessage'
         self.channel = channel
         self.username = username
@@ -140,7 +143,7 @@ class SlackAPIPostOperator(SlackAPIOperator):
         self.blocks = blocks or []
         super().__init__(method=self.method, **kwargs)
 
-    def construct_api_call_params(self):
+    def construct_api_call_params(self) -> Any:
         self.api_params = {
             'channel': self.channel,
             'username': self.username,
@@ -185,27 +188,28 @@ class SlackAPIFileOperator(SlackAPIOperator):
     template_fields = ('channel', 'initial_comment', 'filename', 'filetype', 'content')
     ui_color = '#44BEDF'
 
-    @apply_defaults
-    def __init__(self,
-                 channel: str = '#general',
-                 initial_comment: str = 'No message has been set!',
-                 filename: str = 'default_name.csv',
-                 filetype: str = 'csv',
-                 content: str = 'default,content,csv,file',
-                 **kwargs):
+    def __init__(
+        self,
+        channel: str = '#general',
+        initial_comment: str = 'No message has been set!',
+        filename: str = 'default_name.csv',
+        filetype: str = 'csv',
+        content: str = 'default,content,csv,file',
+        **kwargs,
+    ) -> None:
         self.method = 'files.upload'
         self.channel = channel
         self.initial_comment = initial_comment
         self.filename = filename
         self.filetype = filetype
         self.content = content
-        super(SlackAPIFileOperator, self).__init__(method=self.method, **kwargs)
+        super().__init__(method=self.method, **kwargs)
 
-    def construct_api_call_params(self):
+    def construct_api_call_params(self) -> Any:
         self.api_params = {
             'channels': self.channel,
             'content': self.content,
             'filename': self.filename,
             'filetype': self.filetype,
-            'initial_comment': self.initial_comment
+            'initial_comment': self.initial_comment,
         }

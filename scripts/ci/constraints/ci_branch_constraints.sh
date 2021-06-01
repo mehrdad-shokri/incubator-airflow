@@ -15,17 +15,17 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-export PYTHON_MAJOR_MINOR_VERSION=${PYTHON_MAJOR_MINOR_VERSION:-3.6}
-
 # shellcheck source=scripts/ci/libraries/_script_init.sh
 . "$( dirname "${BASH_SOURCE[0]}" )/../libraries/_script_init.sh"
 
-get_environment_for_builds_on_ci
-
-if [[ ${GITHUB_REF} == 'refs/heads/master' ]]; then
+if [[ ${GITHUB_REF} == 'refs/heads/main' ]]; then
+  echo "::set-output name=branch::constraints-main"
+elif [[ ${GITHUB_REF} == 'refs/heads/master' ]]; then
   echo "::set-output name=branch::constraints-master"
-elif [[ ${GITHUB_REF} == 'refs/heads/v1-10-test' ]]; then
-  echo "::set-output name=branch::constraints-1-10"
+elif [[ ${GITHUB_REF} == 'refs/heads/v2-0-test' ]]; then
+  echo "::set-output name=branch::constraints-2-0"
+elif [[ ${GITHUB_REF} == 'refs/heads/v2-1-test' ]]; then
+  echo "::set-output name=branch::constraints-2-1"
 else
   echo
   echo "Unexpected ref ${GITHUB_REF}. Exiting!"

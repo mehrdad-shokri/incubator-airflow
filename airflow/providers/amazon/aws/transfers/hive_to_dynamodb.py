@@ -16,16 +16,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""
-This module contains operator to move data from Hive to DynamoDB.
-"""
+"""This module contains operator to move data from Hive to DynamoDB."""
 
 import json
+from typing import Callable, Optional
 
 from airflow.models import BaseOperator
-from airflow.providers.amazon.aws.hooks.aws_dynamodb import AwsDynamoDBHook
+from airflow.providers.amazon.aws.hooks.dynamodb import AwsDynamoDBHook
 from airflow.providers.apache.hive.hooks.hive import HiveServer2Hook
-from airflow.utils.decorators import apply_defaults
 
 
 class HiveToDynamoDBOperator(BaseOperator):
@@ -50,7 +48,8 @@ class HiveToDynamoDBOperator(BaseOperator):
     :type region_name: str
     :param schema: hive database schema
     :type schema: str
-    :param hiveserver2_conn_id: source hive connection
+    :param hiveserver2_conn_id: Reference to the
+        :ref: `Hive Server2 thrift service connection id <howto/connection:hiveserver2>`.
     :type hiveserver2_conn_id: str
     :param aws_conn_id: aws connection
     :type aws_conn_id: str
@@ -60,20 +59,21 @@ class HiveToDynamoDBOperator(BaseOperator):
     template_ext = ('.sql',)
     ui_color = '#a0e08c'
 
-    @apply_defaults
     def __init__(  # pylint: disable=too-many-arguments
-            self, *,
-            sql,
-            table_name,
-            table_keys,
-            pre_process=None,
-            pre_process_args=None,
-            pre_process_kwargs=None,
-            region_name=None,
-            schema='default',
-            hiveserver2_conn_id='hiveserver2_default',
-            aws_conn_id='aws_default',
-            **kwargs):
+        self,
+        *,
+        sql: str,
+        table_name: str,
+        table_keys: list,
+        pre_process: Optional[Callable] = None,
+        pre_process_args: Optional[list] = None,
+        pre_process_kwargs: Optional[list] = None,
+        region_name: Optional[str] = None,
+        schema: str = 'default',
+        hiveserver2_conn_id: str = 'hiveserver2_default',
+        aws_conn_id: str = 'aws_default',
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
         self.sql = sql
         self.table_name = table_name
@@ -93,20 +93,20 @@ class HiveToDynamoDBOperator(BaseOperator):
         self.log.info(self.sql)
 
         data = hive.get_pandas_df(self.sql, schema=self.schema)
-        dynamodb = AwsDynamoDBHook(aws_conn_id=self.aws_conn_id,
-                                   table_name=self.table_name,
-                                   table_keys=self.table_keys,
-                                   region_name=self.region_name)
+        dynamodb = AwsDynamoDBHook(
+            aws_conn_id=self.aws_conn_id,
+            table_name=self.table_name,
+            table_keys=self.table_keys,
+            region_name=self.region_name,
+        )
 
         self.log.info('Inserting rows into dynamodb')
 
         if self.pre_process is None:
-            dynamodb.write_batch_data(
-                json.loads(data.to_json(orient='records')))
+            dynamodb.write_batch_data(json.loads(data.to_json(orient='records')))
         else:
             dynamodb.write_batch_data(
-                self.pre_process(data=data,
-                                 args=self.pre_process_args,
-                                 kwargs=self.pre_process_kwargs))
+                self.pre_process(data=data, args=self.pre_process_args, kwargs=self.pre_process_kwargs)
+            )
 
         self.log.info('Done.')

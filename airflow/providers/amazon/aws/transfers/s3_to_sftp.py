@@ -22,7 +22,6 @@ from urllib.parse import urlparse
 from airflow.models import BaseOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.ssh.hooks.ssh import SSHHook
-from airflow.utils.decorators import apply_defaults
 
 
 class S3ToSFTPOperator(BaseOperator):
@@ -48,14 +47,16 @@ class S3ToSFTPOperator(BaseOperator):
 
     template_fields = ('s3_key', 'sftp_path')
 
-    @apply_defaults
-    def __init__(self, *,
-                 s3_bucket,
-                 s3_key,
-                 sftp_path,
-                 sftp_conn_id='ssh_default',
-                 s3_conn_id='aws_default',
-                 **kwargs):
+    def __init__(
+        self,
+        *,
+        s3_bucket: str,
+        s3_key: str,
+        sftp_path: str,
+        sftp_conn_id: str = 'ssh_default',
+        s3_conn_id: str = 'aws_default',
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
         self.sftp_conn_id = sftp_conn_id
         self.sftp_path = sftp_path
@@ -64,14 +65,12 @@ class S3ToSFTPOperator(BaseOperator):
         self.s3_conn_id = s3_conn_id
 
     @staticmethod
-    def get_s3_key(s3_key):
-        """This parses the correct format for S3 keys regardless of how the S3 url is passed.
-        """
-
+    def get_s3_key(s3_key: str) -> str:
+        """This parses the correct format for S3 keys regardless of how the S3 url is passed."""
         parsed_s3_key = urlparse(s3_key)
         return parsed_s3_key.path.lstrip('/')
 
-    def execute(self, context):
+    def execute(self, context) -> None:
         self.s3_key = self.get_s3_key(self.s3_key)
         ssh_hook = SSHHook(ssh_conn_id=self.sftp_conn_id)
         s3_hook = S3Hook(self.s3_conn_id)

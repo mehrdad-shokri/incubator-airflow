@@ -17,42 +17,52 @@
 # under the License.
 
 # Reads environment variable passed as first parameter from the .build cache file
-function read_from_file {
+function parameters::read_from_file() {
     cat "${BUILD_CACHE_DIR}/.$1" 2>/dev/null || true
 }
 
 # Saves environment variable passed as first parameter to the .build cache file
-function save_to_file {
+function parameters::save_to_file() {
     # shellcheck disable=SC2005
-    echo "$(eval echo "\$$1")" > "${BUILD_CACHE_DIR}/.$1"
+    echo "$(eval echo "\$$1")" >"${BUILD_CACHE_DIR}/.$1"
 }
 
-# check if parameter set for the variable is allowed (should be on the _BREEZE_ALLOWED list)
-# and if it is, it saves it to .build cache file. In case the parameter is wrong, the
-# saved variable is removed (so that bad value is not used again in case it comes from there)
-# and exits with an error
-function check_and_save_allowed_param {
-    _VARIABLE_NAME="${1}"
-    _VARIABLE_DESCRIPTIVE_NAME="${2}"
-    _FLAG="${3}"
-    _ALLOWED_VALUES_ENV_NAME="_BREEZE_ALLOWED_${_VARIABLE_NAME}S"
-    _ALLOWED_VALUES=" ${!_ALLOWED_VALUES_ENV_NAME//$'\n'/ } "
-    _VALUE=${!_VARIABLE_NAME}
-    if [[ ${_ALLOWED_VALUES:=} != *" ${_VALUE} "* ]]; then
-        echo >&2
-        echo >&2 "ERROR:  Allowed ${_VARIABLE_DESCRIPTIVE_NAME}: [${_ALLOWED_VALUES}]. Is: '${!_VARIABLE_NAME}'."
-        echo >&2
-        echo >&2 "Switch to supported value with ${_FLAG} flag."
-
-        if [[ -n ${!_VARIABLE_NAME} && \
-            -f "${BUILD_CACHE_DIR}/.${_VARIABLE_NAME}" && \
-            ${!_VARIABLE_NAME} == $(cat "${BUILD_CACHE_DIR}/.${_VARIABLE_NAME}" ) ]]; then
-            echo >&2
-            echo >&2 "Removing ${BUILD_CACHE_DIR}/.${_VARIABLE_NAME}. Next time you run it, it should be OK."
-            echo >&2
-            rm -f "${BUILD_CACHE_DIR}/.${_VARIABLE_NAME}"
+# check if parameter set for the variable is allowed (should be on the _breeze_allowed list)
+# parameters:
+# $1 - name of the variable
+# $2 - descriptive name of the parameter
+# $3 - flag used to set the parameter
+function parameters::check_allowed_param() {
+    local _variable_name="${1}"
+    local _variable_descriptive_name="${2}"
+    local _flag="${3}"
+    local _allowed_values_env_name
+    local _allowed_values
+    local _value
+    _allowed_values_env_name="_breeze_allowed_$(echo "${_variable_name}" | tr '[:upper:]' '[:lower:]')s"
+    _allowed_values=" ${!_allowed_values_env_name//$'\n'/ } "
+    _value=${!_variable_name}
+    if [[ ${_allowed_values:=} != *" ${_value} "* ]]; then
+        echo
+        echo  "${COLOR_RED}ERROR: Allowed ${_variable_descriptive_name}: [${_allowed_values}]. Passed: '${!_variable_name}'  ${COLOR_RESET}"
+        echo
+        echo "Switch to supported value with ${_flag} flag."
+        echo
+        if [[ -n ${!_variable_name} && -f "${BUILD_CACHE_DIR}/.${_variable_name}" && ${!_variable_name} == $(cat "${BUILD_CACHE_DIR}/.${_variable_name}") ]]; then
+            echo
+            echo  "${COLOR_YELLOW}WARNING: Removing ${BUILD_CACHE_DIR}/.${_variable_name}. Next time you run it, it should be OK.  ${COLOR_RESET}"
+            echo
+            echo
+            rm -f "${BUILD_CACHE_DIR}/.${_variable_name}"
         fi
         exit 1
     fi
-    save_to_file "${_VARIABLE_NAME}"
+}
+# check if parameter set for the variable is allowed (should be on the _breeze_allowed list)
+# and if it is, it saves it to .build cache file. In case the parameter is wrong, the
+# saved variable is removed (so that bad value is not used again in case it comes from there)
+# and exits with an error
+function parameters::check_and_save_allowed_param() {
+    parameters::check_allowed_param "${@}"
+    parameters::save_to_file "${1}"
 }

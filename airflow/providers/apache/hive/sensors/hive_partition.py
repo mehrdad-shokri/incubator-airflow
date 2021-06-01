@@ -18,8 +18,7 @@
 from typing import Any, Dict, Optional
 
 from airflow.providers.apache.hive.hooks.hive import HiveMetastoreHook
-from airflow.sensors.base_sensor_operator import BaseSensorOperator
-from airflow.utils.decorators import apply_defaults
+from airflow.sensors.base import BaseSensorOperator
 
 
 class HivePartitionSensor(BaseSensorOperator):
@@ -38,23 +37,29 @@ class HivePartitionSensor(BaseSensorOperator):
         and apparently supports SQL like notation as in ``ds='2015-01-01'
         AND type='value'`` and comparison operators as in ``"ds>=2015-01-01"``
     :type partition: str
-    :param metastore_conn_id: reference to the metastore thrift service
-        connection id
+    :param metastore_conn_id: reference to the
+        :ref: `metastore thrift service connection id <howto/connection:hive_metastore>`
     :type metastore_conn_id: str
     """
-    template_fields = ('schema', 'table', 'partition',)
+
+    template_fields = (
+        'schema',
+        'table',
+        'partition',
+    )
     ui_color = '#C5CAE9'
 
-    @apply_defaults
-    def __init__(self, *,
-                 table: str,
-                 partition: Optional[str] = "ds='{{ ds }}'",
-                 metastore_conn_id: str = 'metastore_default',
-                 schema: str = 'default',
-                 poke_interval: int = 60 * 3,
-                 **kwargs: Any):
-        super().__init__(
-            poke_interval=poke_interval, **kwargs)
+    def __init__(
+        self,
+        *,
+        table: str,
+        partition: Optional[str] = "ds='{{ ds }}'",
+        metastore_conn_id: str = 'metastore_default',
+        schema: str = 'default',
+        poke_interval: int = 60 * 3,
+        **kwargs: Any,
+    ):
+        super().__init__(poke_interval=poke_interval, **kwargs)
         if not partition:
             partition = "ds='{{ ds }}'"
         self.metastore_conn_id = metastore_conn_id
@@ -65,11 +70,7 @@ class HivePartitionSensor(BaseSensorOperator):
     def poke(self, context: Dict[str, Any]) -> bool:
         if '.' in self.table:
             self.schema, self.table = self.table.split('.')
-        self.log.info(
-            'Poking for table %s.%s, partition %s', self.schema, self.table, self.partition
-        )
+        self.log.info('Poking for table %s.%s, partition %s', self.schema, self.table, self.partition)
         if not hasattr(self, 'hook'):
-            hook = HiveMetastoreHook(
-                metastore_conn_id=self.metastore_conn_id)
-        return hook.check_for_partition(
-            self.schema, self.table, self.partition)
+            hook = HiveMetastoreHook(metastore_conn_id=self.metastore_conn_id)
+        return hook.check_for_partition(self.schema, self.table, self.partition)
